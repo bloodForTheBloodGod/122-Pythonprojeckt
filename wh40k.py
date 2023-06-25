@@ -2,9 +2,14 @@ import mysql.connector
 from tkinter import ttk
 import tkinter as tk
 import re
-db = mysql.connector.connect(user='root', password='root',
+try:
+    db = mysql.connector.connect(user='', password='',
                               host='localhost',
                               database='warhammer40k')
+except mysql.connector.Error as e:
+    print("Error connecting to the database: please check username and passwort", e)
+    # Handle the error appropriately, such as displaying an error message to the user
+    # and taking necessary actions.
 
 # Variable to keep track of the currently open cell window
 current_cell_window = None
@@ -52,31 +57,35 @@ def open_data_window(button_value):
 
     # Add the Frame to the Canvas
     canvas.create_window((0, 0), window=frame, anchor=tk.NW)
+    try:
+        # Fetch the data
+        original_data = fetch_data(button_value)
+        data = original_data
 
-    # Fetch the data
-    original_data = fetch_data(button_value)
-    data = original_data
+        # Create labels for column names
+        for j, column_name in enumerate(data[0]):
+            label = ttk.Label(frame, text=column_name)
+            label.grid(row=0, column=j, padx=5, pady=5, sticky='nsew')
 
-    # Create labels for column names
-    for j, column_name in enumerate(data[0]):
-        label = ttk.Label(frame, text=column_name)
-        label.grid(row=0, column=j, padx=5, pady=5, sticky='nsew')
+        # Insert data into labels
+        label_widgets = []
+        for i, row in enumerate(data[0:]):
+            label_row = []
+            for j, value in enumerate(row):
+                label = ttk.Label(frame, text=value)
+                label.grid(row=i, column=j, padx=5, pady=5, sticky='nsew')
+                label.bind('<Button-1>', lambda event, row=i, column=j: show_cell_content(row, column, data))
+                label_row.append(label)
+            label_widgets.append(label_row)
 
-    # Insert data into labels
-    label_widgets = []
-    for i, row in enumerate(data[1:]):
-        label_row = []
-        for j, value in enumerate(row):
-            label = ttk.Label(frame, text=value)
-            label.grid(row=i+1, column=j, padx=5, pady=5, sticky='nsew')
-            label.bind('<Button-1>', lambda event, row=i+1, column=j: show_cell_content(row, column, data))
-            label_row.append(label)
-        label_widgets.append(label_row)
-
-    # Configure the Scrollbars to work with the Canvas and Frame
-    scrollbar_y.configure(command=canvas.yview)
-    scrollbar_x.configure(command=canvas.xview)
-    canvas.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        # Configure the Scrollbars to work with the Canvas and Frame
+        scrollbar_y.configure(command=canvas.yview)
+        scrollbar_x.configure(command=canvas.xview)
+        canvas.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+    except IndexError:
+        print("No data available for the selected button.")
+    except Exception as e:
+        print("An error occurred:", e)
 
     # Function to configure the Canvas scroll region based on the Frame size
     def configure_canvas(event):
@@ -135,13 +144,17 @@ def show_cell_content(row, column, data):
 
     # Assign the new window to the current_cell_window variable
     current_cell_window = cell_window
+    try:
+        # Get the content of the clicked cell
+        cell_content = data[row][column]
 
-    # Get the content of the clicked cell
-    cell_content = data[row][column]
+        # Create a Label to display the cell content
+        label = tk.Label(cell_window, text=cell_content)
+        label.pack(padx=10, pady=10)
 
-    # Create a Label to display the cell content
-    label = tk.Label(cell_window, text=cell_content)
-    label.pack(padx=10, pady=10)
-
-    # Start the Tkinter event loop for the cell_window
-    cell_window.mainloop()
+        # Start the Tkinter event loop for the cell_window
+        cell_window.mainloop()
+    except IndexError:
+        print("No data available for the selected cell.")
+    except Exception as e:
+        print("An error occurred:", e)
